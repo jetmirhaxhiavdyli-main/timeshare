@@ -4,7 +4,8 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function Home() {
-  const router = useRouter();
+  // Removed unused variable
+  // const router = useRouter();
 
   useEffect(() => {
     window.location.href = '/auth';

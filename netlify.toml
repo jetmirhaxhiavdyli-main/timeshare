@@ -5,6 +5,11 @@
 [build.environment]
   NODE_VERSION = "18.20.5"
   NEXT_TELEMETRY_DISABLED = "1"
+  NEXT_WEBPACK_USEPOLLING = "1"
+  NEXT_SHARP_PATH = "/tmp/node_modules/sharp"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
+
+[functions]
+  included_files = ["node_modules/sharp/**/*"]

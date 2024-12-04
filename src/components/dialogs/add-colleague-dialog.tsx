@@ -19,7 +19,6 @@ import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import countriesWithTimezones from "@/lib/countries-with-timezones";
 import Image from "next/image";
-import { Colleague } from "@/components/calendar/colleagues-list";
 
 interface AddColleagueDialogProps {
   open: boolean;

@@ -26,10 +26,6 @@ export default function CalendarPage() {
     setColleagues((prev) => [...prev, newColleague]);
   };
 
-  const handleRemoveColleague = (id: string) => {
-    setColleagues((prev) => prev.filter((colleague) => colleague.id !== id));
-  };
-
   const getTimeDifference = (colleagueTimezone: string) => {
     try {
       // Use local timezone as base since creator_timezone is not available
@@ -84,68 +80,54 @@ export default function CalendarPage() {
   };
 
   useEffect(() => {
-    console.log('Calendar Page Mounted');
-    console.log('Current Params:', params);
-    console.log('Current URL:', window.location.href);
-
+    if (!params) return;
     const fetchCalendar = async () => {
-      if (!params.id) {
-        console.error('No calendar ID provided');
-        toast.error('No calendar ID provided');
-        return;
-      }
-
       try {
-        console.log('Fetching calendar with ID:', params.id);
-        const { data: calendar, error } = await supabase
+        console.log('Fetching calendar with shareable_id:', params.id);
+        const { data, error } = await supabase
           .from('calendars')
-          .select('*')
+          .select()
           .eq('shareable_id', params.id)
           .single();
 
         if (error) {
-          console.error('Error fetching calendar:', error);
-          toast.error('Failed to load calendar');
-          return;
+          console.error('Supabase error:', error);
+          throw error;
         }
 
-        if (!calendar) {
+        if (!data) {
           console.error('Calendar not found');
-          toast.error('Calendar not found');
-          return;
+          throw new Error('Calendar not found');
         }
 
-        console.log('Calendar found:', calendar);
-        setCalendar(calendar);
+        console.log('Calendar found:', data);
+        setCalendar(data);
       } catch (error) {
-        console.error('Error:', error);
-        toast.error('An error occurred');
+        console.error('Error fetching calendar:', error);
+        console.error('Error details:', JSON.stringify(error, null, 2));
+        toast.error('Failed to load calendar');
       } finally {
         setLoading(false);
       }
     };
 
     fetchCalendar();
-  }, [params.id]);
+  }, [params]);
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900" />
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
       </div>
     );
   }
 
   if (!calendar) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Calendar not found</h1>
-          <p className="text-gray-600 mb-4">The calendar you're looking for doesn't exist.</p>
-          <Button onClick={() => window.location.href = '/'}>
-            Go Home
-          </Button>
-        </div>
+      <div className="min-h-screen flex flex-col items-center justify-center">
+        <h1 className="text-2xl font-bold mb-4">Calendar not found</h1>
+        <p className="text-gray-600 mb-4">The calendar you're looking for doesn't exist.</p>
+        <Button onClick={() => window.location.href = '/auth'}>Go Home</Button>
       </div>
     );
   }
@@ -163,7 +145,7 @@ export default function CalendarPage() {
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar 
-        calendarId={calendar.shareable_id} 
+        calendarId={calendar.id} 
         calendarName={calendar.name} 
         onAddColleague={handleAddColleague}
       />
