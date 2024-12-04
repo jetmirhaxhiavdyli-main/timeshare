@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
+import { nanoid } from 'nanoid';
 
 export default function DashboardPage() {
   const [calendarName, setCalendarName] = useState('');
@@ -19,12 +20,16 @@ export default function DashboardPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
+      // Generate a shorter, URL-friendly ID
+      const shareableId = nanoid(10);
+
       const { data, error } = await supabase
         .from('calendars')
         .insert([
           {
             name: calendarName,
             owner_id: user.id,
+            shareable_id: shareableId,
           },
         ])
         .select()
@@ -33,7 +38,7 @@ export default function DashboardPage() {
       if (error) throw error;
 
       toast.success('Calendar created successfully!');
-      router.push(`/calendar/${data.id}`);
+      router.push(`/calendar/${data.shareable_id}`);
     } catch (error) {
       toast.error('Error creating calendar');
       console.error('Error:', error);
@@ -50,15 +55,15 @@ export default function DashboardPage() {
       const { data, error } = await supabase
         .from('calendars')
         .select('*')
-        .eq('id', calendarCode)
+        .eq('shareable_id', calendarCode)
         .single();
 
       if (error) throw error;
 
       toast.success('Joined calendar successfully!');
-      router.push(`/calendar/${data.id}`);
+      router.push(`/calendar/${data.shareable_id}`);
     } catch (error) {
-      toast.error('Invalid calendar code');
+      toast.error('Calendar not found');
       console.error('Error:', error);
     } finally {
       setIsLoading(false);

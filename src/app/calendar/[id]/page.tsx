@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { Button } from "@/components/ui/button";
 import toast from 'react-hot-toast';
 import Navbar from '@/components/navigation/navbar';
@@ -16,14 +16,82 @@ interface Calendar {
 }
 
 export default function CalendarPage() {
+  const supabase = createClientComponentClient();
   const params = useParams();
   const [calendar, setCalendar] = useState<Calendar | null>(null);
   const [loading, setLoading] = useState(true);
   const [colleagues, setColleagues] = useState<Colleague[]>([]);
   const hours = Array.from({ length: 24 }, (_, i) => i);
 
-  const handleAddColleague = (newColleague: Colleague) => {
-    setColleagues((prev) => [...prev, newColleague]);
+  const handleAddColleague = async (newColleague: Colleague) => {
+    try {
+      console.log('handleAddColleague called with:', newColleague);
+      console.log('Current calendar:', calendar);
+
+      if (!calendar?.id) {
+        console.error('No calendar ID available');
+        toast.error('Failed to add colleague: No calendar ID');
+        return;
+      }
+
+      const colleagueData = {
+        calendar_id: calendar.id,
+        name: newColleague.name,
+        profile_picture: newColleague.profilePicture,
+        country: newColleague.country,
+        timezone: newColleague.timezone,
+      };
+
+      console.log('Attempting to add colleague with data:', colleagueData);
+
+      // Insert the colleague and return the inserted row
+      const { data: insertedData, error: insertError } = await supabase
+        .from('colleagues')
+        .insert([colleagueData])
+        .select()
+        .single();
+
+      console.log('Supabase response:', { data: insertedData, error: insertError });
+
+      if (insertError) {
+        console.error('Failed to insert colleague:', insertError);
+        toast.error(`Failed to add colleague: ${insertError.message}`);
+        return;
+      }
+
+      if (!insertedData) {
+        console.error('No data returned after insert');
+        toast.error('Failed to add colleague: No data returned');
+        return;
+      }
+
+      console.log('Successfully inserted colleague:', insertedData);
+
+      // Transform the inserted data for the UI
+      const colleagueWithId = {
+        id: insertedData.id,
+        name: insertedData.name,
+        profilePicture: insertedData.profile_picture,
+        country: insertedData.country,
+        timezone: insertedData.timezone,
+        hourDifference: getTimeDifference(insertedData.timezone),
+      };
+      
+      setColleagues(prev => [...prev, colleagueWithId]);
+      toast.success('Colleague added successfully!');
+
+      // Verify by immediately fetching all colleagues
+      const { data: allColleagues, error: fetchError } = await supabase
+        .from('colleagues')
+        .select('*')
+        .eq('calendar_id', calendar.id);
+
+      console.log('Verification fetch result:', { data: allColleagues, error: fetchError });
+
+    } catch (error: any) {
+      console.error('Error in handleAddColleague:', error);
+      toast.error(`Error adding colleague: ${error.message}`);
+    }
   };
 
   const getTimeDifference = (colleagueTimezone: string) => {
@@ -80,39 +148,79 @@ export default function CalendarPage() {
   };
 
   useEffect(() => {
-    if (!params) return;
     const fetchCalendar = async () => {
+      if (!params) return;
+      
       try {
         console.log('Fetching calendar with shareable_id:', params.id);
-        const { data, error } = await supabase
+        // Fetch calendar
+        const { data: calendarData, error: calendarError } = await supabase
           .from('calendars')
-          .select()
+          .select('id, name, shareable_id')
           .eq('shareable_id', params.id)
           .single();
 
-        if (error) {
-          console.error('Supabase error:', error);
-          throw error;
+        if (calendarError) {
+          console.error('Supabase calendar fetch error:', calendarError);
+          throw calendarError;
         }
 
-        if (!data) {
+        if (!calendarData) {
           console.error('Calendar not found');
           throw new Error('Calendar not found');
         }
 
-        console.log('Calendar found:', data);
-        setCalendar(data);
-      } catch (error) {
+        console.log('Calendar found:', calendarData);
+        setCalendar(calendarData);
+
+      } catch (error: any) {
         console.error('Error fetching calendar:', error);
-        console.error('Error details:', JSON.stringify(error, null, 2));
-        toast.error('Failed to load calendar');
-      } finally {
-        setLoading(false);
+        console.error('Full error object:', JSON.stringify(error, null, 2));
+        toast.error('Error loading calendar data');
       }
     };
 
     fetchCalendar();
   }, [params]);
+
+  useEffect(() => {
+    const fetchColleagues = async () => {
+      if (!calendar?.id) {
+        console.log('No calendar ID available for fetching colleagues');
+        return;
+      }
+
+      console.log('Fetching colleagues for calendar:', calendar.id);
+      
+      const { data: fetchedColleagues, error } = await supabase
+        .from('colleagues')
+        .select('*')
+        .eq('calendar_id', calendar.id);
+
+      if (error) {
+        console.error('Error fetching colleagues:', error);
+        toast.error('Failed to load colleagues');
+        return;
+      }
+
+      console.log('Fetched colleagues:', fetchedColleagues);
+
+      // Transform the data to match our Colleague type
+      const transformedColleagues = fetchedColleagues.map(colleague => ({
+        id: colleague.id,
+        name: colleague.name,
+        profilePicture: colleague.profile_picture,
+        country: colleague.country,
+        timezone: colleague.timezone,
+        hourDifference: getTimeDifference(colleague.timezone),
+      }));
+
+      setColleagues(transformedColleagues);
+      setLoading(false);
+    };
+
+    fetchColleagues();
+  }, [calendar?.id, supabase]);
 
   if (loading) {
     return (
@@ -127,7 +235,7 @@ export default function CalendarPage() {
       <div className="min-h-screen flex flex-col items-center justify-center">
         <h1 className="text-2xl font-bold mb-4">Calendar not found</h1>
         <p className="text-gray-600 mb-4">The calendar you&apos;re looking for doesn&apos;t exist.</p>
-        <Button onClick={() => window.location.href = '/auth'}>Go Home</Button>
+        <Button onClick={() => window.location.href = '/'}>Go Home</Button>
       </div>
     );
   }
@@ -144,8 +252,9 @@ export default function CalendarPage() {
 
   return (
     <div className="min-h-screen flex flex-col">
+      {console.log('Calendar data:', calendar)}
       <Navbar 
-        calendarId={calendar.id} 
+        calendarId={calendar.shareable_id} 
         calendarName={calendar.name} 
         onAddColleague={handleAddColleague}
       />
