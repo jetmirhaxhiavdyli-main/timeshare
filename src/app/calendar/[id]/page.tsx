@@ -21,6 +21,7 @@ export default function CalendarPage() {
   const [calendar, setCalendar] = useState<Calendar | null>(null);
   const [loading, setLoading] = useState(true);
   const [colleagues, setColleagues] = useState<Colleague[]>([]);
+  const [currentTime, setCurrentTime] = useState(new Date());
   const hours = Array.from({ length: 24 }, (_, i) => i);
 
   const handleAddColleague = async (newColleague: Colleague) => {
@@ -147,6 +148,15 @@ export default function CalendarPage() {
     return colleagueTime;
   };
 
+  // Format current time as HH:mm
+  const formatCurrentTime = (date: Date) => {
+    return date.toLocaleTimeString('en-US', { 
+      hour: '2-digit', 
+      minute: '2-digit', 
+      hour12: false 
+    });
+  };
+
   useEffect(() => {
     const fetchCalendar = async () => {
       if (!params) return;
@@ -222,6 +232,20 @@ export default function CalendarPage() {
     fetchColleagues();
   }, [calendar?.id, supabase]);
 
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000); // Update every minute
+
+    return () => clearInterval(timer);
+  }, []);
+
+  const getCurrentTimePosition = () => {
+    const hours = currentTime.getHours();
+    const minutes = currentTime.getMinutes();
+    return (hours + minutes / 60) * 100;
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -252,57 +276,79 @@ export default function CalendarPage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {console.log('Calendar data:', calendar)}
       <Navbar 
-        calendarId={calendar.shareable_id} 
-        calendarName={calendar.name} 
+        calendarId={calendar?.shareable_id || ''} 
+        calendarName={calendar?.name || ''} 
         onAddColleague={handleAddColleague}
       />
-      
-      <main className="flex-1 overflow-auto p-8">
-        <div className="bg-white border border-gray-200 rounded-lg">
-          {/* Time slots grid */}
-          <div>
-            {hours.map((hour) => (
-              <div key={hour} className="flex w-full border-b border-gray-200 last:border-b-0">
-                {/* Hour label */}
-                <div className="w-[100px] py-4 px-4 text-sm text-gray-500 border-r border-gray-200 flex-shrink-0">
-                  {`${hour.toString().padStart(2, '0')}:00`}
-                </div>
-                
-                {/* Time slot content area */}
-                <div className="flex-1 p-2 min-h-[80px] hover:bg-gray-50">
-                  {colleaguesByHour[hour]?.map((colleague) => (
-                    <div 
-                      key={colleague.id} 
-                      className="flex items-center gap-3 p-2 bg-white rounded-lg shadow-sm border border-gray-200"
-                    >
-                      <div className="relative w-10 h-10 rounded-full overflow-hidden">
-                        <Image
-                          src={colleague.profilePicture}
-                          alt={colleague.name}
-                          fill
-                          className="object-cover"
+      <div className="flex-1 space-y-8 pt-8">
+        <main className="px-8">
+          <div className="bg-white border border-gray-200 rounded-xl">
+            {/* Time slots grid */}
+            <div>
+              {hours.map((hour) => (
+                <div key={hour} className="flex w-full border-b border-gray-200 last:border-b-0 relative">
+                  {/* Hour label */}
+                  <div className="w-[100px] py-4 px-4 text-sm text-gray-500 border-r border-gray-200 flex-shrink-0">
+                    {`${hour.toString().padStart(2, '0')}:00`}
+                  </div>
+                  
+                  {/* Time slot content area */}
+                  <div className="flex-1 p-2 min-h-[80px] hover:bg-gray-50 relative">
+                    {/* Current time indicator */}
+                    {hour === currentTime.getHours() && (
+                      <div className="absolute left-0 right-0 z-10">
+                        {/* Line */}
+                        <div 
+                          className="absolute left-0 right-0 border-t-2 border-dotted border-blue-500"
+                          style={{ 
+                            top: `${(currentTime.getMinutes() / 60) * 100}%`,
+                          }}
                         />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="font-medium truncate">{colleague.name}</div>
-                        <div className="flex items-center gap-2 text-sm text-gray-500">
-                          <span className="truncate">{colleague.country}</span>
-                          <span className="flex-shrink-0">•</span>
-                          <span className="flex-shrink-0">{getColleagueCurrentTime(colleague)}</span>
-                          <span className="flex-shrink-0">•</span>
-                          <span className="flex-shrink-0">{formatHourDifference(colleague)}</span>
+                        {/* Time badge */}
+                        <div 
+                          className="absolute left-1/2 -translate-x-1/2 bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full whitespace-nowrap"
+                          style={{ 
+                            top: `${(currentTime.getMinutes() / 60) * 100}%`,
+                            transform: 'translate(-50%, -50%)'
+                          }}
+                        >
+                          {formatCurrentTime(currentTime)}
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    )}
+                    {colleaguesByHour[hour]?.map((colleague) => (
+                      <div 
+                        key={colleague.id} 
+                        className="flex items-center gap-3 p-2 bg-white rounded-lg shadow-sm border border-gray-200"
+                      >
+                        <div className="relative w-10 h-10 rounded-full overflow-hidden">
+                          <Image
+                            src={colleague.profilePicture}
+                            alt={colleague.name}
+                            fill
+                            className="object-cover"
+                          />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="font-medium truncate">{colleague.name}</div>
+                          <div className="flex items-center gap-2 text-sm text-gray-500">
+                            <span className="truncate">{colleague.country}</span>
+                            <span className="flex-shrink-0">•</span>
+                            <span className="flex-shrink-0">{getColleagueCurrentTime(colleague)}</span>
+                            <span className="flex-shrink-0">•</span>
+                            <span className="flex-shrink-0">{formatHourDifference(colleague)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
-      </main>
+        </main>
+      </div>
     </div>
   );
 }
