@@ -3,15 +3,17 @@
   publish = ".next"
 
 [build.environment]
-  NODE_VERSION = "18.20.5"
+  NODE_VERSION = "18.17.0"
   NEXT_TELEMETRY_DISABLED = "1"
   NEXT_WEBPACK_USEPOLLING = "1"
-  NEXT_SHARP_PATH = "/tmp/node_modules/sharp"
-  NEXT_PUBLIC_FORCE_SWAP_TO_PRERELEASE = "false"
   NODE_ENV = "production"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
-[functions]
-  included_files = ["node_modules/sharp/**/*"]
+[build.processing]
+  skip_processing = false
+
+[build.processing.css]
+  bundle = true
+  minify = true
