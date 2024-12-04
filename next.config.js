@@ -1,12 +1,29 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  async redirects() {
-    return [];
+  swcMinify: true,
+  images: {
+    unoptimized: true,
   },
-  async rewrites() {
-    return [];
+  typescript: {
+    ignoreBuildErrors: false,
   },
+  eslint: {
+    ignoreDuringBuilds: false,
+  },
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          {
+            key: 'X-DNS-Prefetch-Control',
+            value: 'on'
+          }
+        ],
+      },
+    ]
+  }
 }
 
 module.exports = nextConfig
