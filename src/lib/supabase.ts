@@ -7,7 +7,10 @@ console.log('Supabase URL:', supabaseUrl ? 'Found' : 'Missing');
 console.log('Supabase Anon Key:', supabaseAnonKey ? 'Found' : 'Missing');
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
+  console.error('Missing Supabase environment variables. Please check your .env file.');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(
+  supabaseUrl || 'https://placeholder-url.supabase.co',
+  supabaseAnonKey || 'placeholder-key'
+);
