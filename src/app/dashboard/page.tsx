@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { nanoid } from 'nanoid';
+import { generateShareableId } from '@/lib/utils';
 
 export default function DashboardPage() {
   const [calendarName, setCalendarName] = useState('');
@@ -20,8 +21,21 @@ export default function DashboardPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      // Generate a shorter, URL-friendly ID
-      const shareableId = nanoid(10);
+      // Generate shareable ID from calendar name
+      const baseShareableId = generateShareableId(calendarName);
+      
+      // Check if the ID already exists
+      const { data: existingCalendar } = await supabase
+        .from('calendars')
+        .select('shareable_id, name')
+        .eq('shareable_id', baseShareableId)
+        .single();
+
+      if (existingCalendar) {
+        toast.error('This calendar name is already taken. Please choose a different name.');
+        setIsLoading(false);
+        return;
+      }
 
       const { data, error } = await supabase
         .from('calendars')
@@ -29,7 +43,7 @@ export default function DashboardPage() {
           {
             name: calendarName,
             owner_id: user.id,
-            shareable_id: shareableId,
+            shareable_id: baseShareableId,
           },
         ])
         .select()

@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase';
 import { nanoid } from 'nanoid';
 import toast from 'react-hot-toast';
 import { Linkedin } from 'lucide-react';
+import { generateShareableId } from '@/lib/utils';
 
 export default function AuthPage() {
   const router = useRouter();
@@ -23,13 +24,26 @@ export default function AuthPage() {
 
     setLoading(true);
     try {
-      // Generate a unique ID for the calendar
-      const shareable_id = nanoid(10);
+      // Generate shareable ID from calendar name
+      const baseShareableId = generateShareableId(calendarName);
       
-      // Create the calendar data object without timezone for now
+      // Check if the ID already exists
+      const { data: existingCalendar } = await supabase
+        .from('calendars')
+        .select('shareable_id, name')
+        .eq('shareable_id', baseShareableId)
+        .single();
+
+      if (existingCalendar) {
+        toast.error('This calendar name is already taken. Please choose a different name.');
+        setLoading(false);
+        return;
+      }
+      
+      // Create the calendar data object
       const calendarData = {
         name: calendarName.trim(),
-        shareable_id: shareable_id,
+        shareable_id: baseShareableId,
         created_at: new Date().toISOString()
       };
       
@@ -51,7 +65,7 @@ export default function AuthPage() {
       toast.success('Calendar created!');
 
       // Redirect to the calendar page
-      const calendarUrl = `/calendar/${shareable_id}`;
+      const calendarUrl = `/calendar/${baseShareableId}`;
       console.log('Redirecting to:', calendarUrl);
       router.push(calendarUrl);
 
