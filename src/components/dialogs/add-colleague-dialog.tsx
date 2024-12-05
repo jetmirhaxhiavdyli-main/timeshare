@@ -65,7 +65,7 @@ export const AddColleagueDialog: FC<AddColleagueDialogProps> = ({ open, onOpenCh
 
     onAddColleague({
       name: fullName,
-      profilePicture: imageUrl || '/default-profile.png',
+      profilePicture: imageUrl || '',
       country: selectedCountryData.label,
       timezone: selectedTimezone,
     });

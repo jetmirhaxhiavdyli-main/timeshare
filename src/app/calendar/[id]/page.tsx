@@ -8,6 +8,7 @@ import toast from 'react-hot-toast';
 import Navbar from '@/components/navigation/navbar';
 import { Colleague } from '@/components/calendar/colleagues-list';
 import Image from 'next/image';
+import { Trash2 } from 'lucide-react';
 
 interface Calendar {
   id: string;
@@ -95,6 +96,27 @@ export default function CalendarPage() {
     }
   };
 
+  const handleRemoveColleague = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('colleagues')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('Failed to remove colleague:', error);
+        toast.error('Failed to remove colleague');
+        return;
+      }
+
+      setColleagues(prev => prev.filter(colleague => colleague.id !== id));
+      toast.success('Colleague removed successfully');
+    } catch (error) {
+      console.error('Error removing colleague:', error);
+      toast.error('Error removing colleague');
+    }
+  };
+
   const getTimeDifference = (colleagueTimezone: string) => {
     try {
       // Use local timezone as base since creator_timezone is not available
@@ -155,6 +177,15 @@ export default function CalendarPage() {
       minute: '2-digit', 
       hour12: false 
     });
+  };
+
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(word => word[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
   };
 
   useEffect(() => {
@@ -280,6 +311,7 @@ export default function CalendarPage() {
         calendarId={calendar?.shareable_id || ''} 
         calendarName={calendar?.name || ''} 
         onAddColleague={handleAddColleague}
+        onRemoveColleague={handleRemoveColleague}
       />
       <div className="flex-1 space-y-8 pt-8">
         <main className="px-8">
@@ -320,26 +352,42 @@ export default function CalendarPage() {
                     {colleaguesByHour[hour]?.map((colleague) => (
                       <div 
                         key={colleague.id} 
-                        className="flex items-center gap-3 p-2 bg-white rounded-lg shadow-sm border border-gray-200"
+                        className="flex items-center justify-between gap-3 p-2 bg-white rounded-lg shadow-sm border border-gray-200"
                       >
-                        <div className="relative w-10 h-10 rounded-full overflow-hidden">
-                          <Image
-                            src={colleague.profilePicture}
-                            alt={colleague.name}
-                            fill
-                            className="object-cover"
-                          />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="font-medium truncate">{colleague.name}</div>
-                          <div className="flex items-center gap-2 text-sm text-gray-500">
-                            <span className="truncate">{colleague.country}</span>
-                            <span className="flex-shrink-0">•</span>
-                            <span className="flex-shrink-0">{getColleagueCurrentTime(colleague)}</span>
-                            <span className="flex-shrink-0">•</span>
-                            <span className="flex-shrink-0">{formatHourDifference(colleague)}</span>
+                        <div className="flex items-center gap-3 flex-1">
+                          <div className="relative w-10 h-10 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
+                            {colleague.profilePicture && colleague.profilePicture !== null ? (
+                              <Image
+                                src={colleague.profilePicture}
+                                alt={colleague.name}
+                                fill
+                                className="object-cover"
+                              />
+                            ) : (
+                              <span className="text-gray-600 font-medium text-sm">
+                                {getInitials(colleague.name)}
+                              </span>
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="font-medium truncate">{colleague.name}</div>
+                            <div className="flex items-center gap-2 text-sm text-gray-500">
+                              <span className="truncate">{colleague.country}</span>
+                              <span className="flex-shrink-0">•</span>
+                              <span className="flex-shrink-0">{getColleagueCurrentTime(colleague)}</span>
+                              <span className="flex-shrink-0">•</span>
+                              <span className="flex-shrink-0">{formatHourDifference(colleague)}</span>
+                            </div>
                           </div>
                         </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleRemoveColleague(colleague.id)}
+                          className="text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                        >
+                          <Trash2 className="h-5 w-5" />
+                        </Button>
                       </div>
                     ))}
                   </div>

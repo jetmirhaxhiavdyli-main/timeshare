@@ -1,5 +1,7 @@
 import React from 'react';
 import Image from 'next/image';
+import { Button } from '@/components/ui/button';
+import { Trash2 } from 'lucide-react';
 
 interface ColleagueCardProps {
   name: string;
@@ -19,7 +21,7 @@ const ColleagueCard: React.FC<ColleagueCardProps> = ({
   onRemove,
 }) => {
   return (
-    <div className="flex items-center justify-between p-4 border rounded-lg shadow-md">
+    <div className="flex items-center justify-between p-4 border rounded-lg shadow-sm bg-white">
       <div className="flex items-center">
         <Image
           src={profilePicture}
@@ -35,12 +37,14 @@ const ColleagueCard: React.FC<ColleagueCardProps> = ({
           <p className="text-sm text-gray-600">Hour Difference: {hourDifference} hrs</p>
         </div>
       </div>
-      <button
+      <Button
+        variant="ghost"
+        size="icon"
         onClick={onRemove}
-        className="text-red-500 hover:text-red-700"
+        className="text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
       >
-        Remove
-      </button>
+        <Trash2 className="h-5 w-5" />
+      </Button>
     </div>
   );
 };
